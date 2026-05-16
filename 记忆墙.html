@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>記憶牆</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #f8f6f2; --card-bg: #fcfaf7; --text: #5c5346;
+  --text-dim: rgba(92,83,70,0.22); --text-mid: rgba(92,83,70,0.4);
+  --border: rgba(92,83,70,0.06); --accent: rgba(92,83,70,0.04);
+  --placeholder: rgba(92,83,70,0.15); --tag-bg: rgba(92,83,70,0.04);
+  --tag-text: rgba(92,83,70,0.45); --input-bg: rgba(252,250,247,0.7);
+  --shadow: rgba(92,83,70,0.03);
+  --muted-blue: #8a9ba8; --muted-rose: #b8928a;
+  --muted-green: #8f9e8c; --muted-clay: #b8957a;
+  --muted-lavender: #9b8ea8; --muted-mauve: #a8888a;
+  --glow: rgba(184,146,138,0.06);
+}
+[data-theme="night"] {
+  --bg: #1a1a1e; --card-bg: #222226; --text: #d4cfc8;
+  --text-dim: rgba(212,207,200,0.18); --text-mid: rgba(212,207,200,0.35);
+  --border: rgba(212,207,200,0.04); --accent: rgba(212,207,200,0.04);
+  --placeholder: rgba(212,207,200,0.1); --tag-bg: rgba(212,207,200,0.03);
+  --tag-text: rgba(212,207,200,0.3); --input-bg: rgba(34,34,38,0.8);
+  --shadow: rgba(0,0,0,0.25);
+  --muted-blue: #768894; --muted-rose: #a07e78;
+  --muted-green: #7a8a78; --muted-clay: #a07e68;
+  --muted-lavender: #847a94; --muted-mauve: #8a7478;
+  --glow: rgba(138,123,118,0.06);
+}
+body {
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system,'PingFang SC','Noto Sans SC',sans-serif;
+  min-height: 100vh; transition: background .5s,color .5s;
+  padding: 40px 24px; line-height: 1.6;
+}
+.main-layout {
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  padding-left: 0;
+}
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  border-radius: 0 18px 18px 0;
+  padding: 40px 14px 24px;
+  max-height: 100vh;
+  z-index: 10;
+  border-left: none;
+  box-shadow: 4px 0 20px var(--shadow);
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
+}
+.sidebar-title {
+  font-size: 13px; font-weight: 400; letter-spacing: 1px; color: var(--text-mid);
+  padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px;
+}
+.sidebar-item {
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  transition: all .2s; margin-bottom: 4px; border: 1px solid transparent;
+}
+.sidebar-item:hover { background: var(--tag-bg); border-color: var(--muted-rose); }
+.sidebar-item .s-title {
+  font-size: 13px; font-weight: 400; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-item .s-title.no-title { color: var(--text-mid); font-weight: 300; }
+.sidebar-item .s-preview {
+  font-size: 11px; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+}
+.sidebar-item .s-tag {
+  display: inline-block; font-size: 9px; padding: 1px 8px;
+  border-radius: 8px; background: var(--tag-bg); color: var(--tag-text); margin-top: 4px;
+}
+.content-area {
+  flex: 1;
+  min-width: 0;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-left: 200px;
+}
+.header {
+  max-width: 100%; margin: 0 auto 36px;
+  display: flex; justify-content: space-between; align-items: baseline; position: relative;
+}
+.header::after {
+  content: ''; position: absolute; bottom: -10px; left: 0; right: 0;
+  height: 1px; background: var(--border);
+}
+.header h1 {
+  font-size: 20px; font-weight: 400; letter-spacing: 3px; color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+.header h1 .mark {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted-rose); opacity: .5;
+}
+.header .stats-wrap { display: flex; align-items: center; gap: 12px; }
+.stats { font-size: 12px; color: var(--text-mid); letter-spacing: 1px; font-weight: 300; }
+.theme-btn {
+  background: none; border: 1px solid var(--border); border-radius: 10px;
+  padding: 4px 12px; font-size: 12px; font-family: inherit;
+  color: var(--text-mid); cursor: pointer; letter-spacing: 1px; transition: all .2s;
+}
+.theme-btn:hover { border-color: var(--muted-rose); color: var(--text); }
+.input-row {
+  max-width: 100%; margin: 0 auto 24px; display: flex; flex-direction: column; gap: 8px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px;
+  padding: 14px 14px 12px; transition: all .25s; box-shadow: 0 4px 20px var(--shadow);
+}
+.input-row:focus-within { border-color: var(--muted-rose); box-shadow: 0 4px 28px var(--glow); }
+.input-row .input-top { display: flex; gap: 8px; align-items: center; }
+.input-row .input-title {
+  flex: 1; height: 36px; background: transparent; border: none; color: var(--text);
+  font-size: 14px; font-family: inherit; outline: none; line-height: 36px; font-weight: 400;
+}
+.input-row .input-title::placeholder { color: var(--placeholder); font-weight: 300; }
+.input-row .input-options { display: flex; gap: 6px; align-items: center; }
+.mode-toggle {
+  display: flex; gap: 2px; background: var(--tag-bg);
+  border-radius: 10px; padding: 2px; border: 1px solid var(--border);
+}
+.mode-btn {
+  padding: 4px 12px; border: none; border-radius: 8px; font-size: 11px;
+  font-family: inherit; cursor: pointer; transition: all .2s;
+  background: transparent; color: var(--text-mid); letter-spacing: .5px;
+}
+.mode-btn.active { background: var(--card-bg); color: var(--text); box-shadow: 0 1px 4px var(--shadow); }
+.input-row textarea {
+  width: 100%; background: transparent; border: none; color: var(--text);
+  font-size: 14px; font-family: inherit; resize: vertical; outline: none;
+  line-height: 1.6; padding: 0; min-height: 38px; transition: min-height .2s;
+}
+.input-row textarea.long-mode { min-height: 180px; }
+.input-row textarea::placeholder { color: var(--placeholder); font-weight: 300; }
+.input-row .input-bottom { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.input-row select {
+  height: 36px; background: var(--tag-bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 10px; color: var(--text-mid); font-size: 12px;
+  font-family: inherit; outline: none; cursor: pointer; min-width: 44px;
+  appearance: none; text-align: center; transition: all .2s;
+}
+.input-row select:hover { border-color: var(--muted-rose); }
+.input-row button {
+  height: 36px; padding: 0 18px; background: var(--accent); border: 1px solid var(--border);
+  border-radius: 14px; color: var(--text); font-size: 13px; font-family: inherit;
+  cursor: pointer; letter-spacing: 1px; transition: all .25s; white-space: nowrap; font-weight: 300;
+}
+.input-row button:hover { background: var(--tag-bg); border-color: var(--muted-rose); }
+.toolbar { max-width: 100%; margin: 0 auto 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.search-box { flex: 1; min-width: 180px; margin: 0; position: relative; }
+.search-box input {
+  width: 100%; height: 38px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 20px; padding: 0 18px 0 40px; color: var(--text); font-size: 13px;
+  font-family: inherit; outline: none; transition: all .25s; box-shadow: 0 2px 12px var(--shadow);
+}
+.search-box input:focus { border-color: var(--muted-rose); box-shadow: 0 2px 16px var(--glow); }
+.search-box input::placeholder { color: var(--placeholder); font-weight: 300; }
+.search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: var(--text-dim); pointer-events: none;
+}
+.filters { display: flex; gap: 6px; flex-wrap: wrap; max-width: none; margin: 0; }
+.filter-tag {
+  padding: 4px 14px; border-radius: 20px; font-size: 12px; color: var(--text-mid);
+  background: var(--card-bg); border: 1px solid var(--border); cursor: pointer;
+  transition: all .25s; letter-spacing: .5px; font-weight: 300; box-shadow: 0 1px 6px var(--shadow);
+}
+ border-color: var(--muted-rose); }
+.filter-tag.active { color: var(--text); background: var(--tag-bg); border-color: var(--muted-rose); }
+.section-title {
+  max-width: 100%; margin: 28px auto 12px; display: flex; align-items: center;
+  gap: 10px; font-size: 14px; color: var(--text-mid); letter-spacing: 1.5px; font-weight: 300;
+}
+.section-title .line { flex: 1; height: 1px; background: var(--border); }
+.section-title .count { font-size: 11px; color: var(--text-dim); font-weight: 300; }
+.wall { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 12px; }
+.card {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px;
+  padding: 20px 22px; transition: all .3s; position: relative; animation: cardIn .35s;
+  box-shadow: 0 4px 20px var(--shadow); cursor: pointer;
+}
+.card:hover { border-color: var(--muted-rose); box-shadow: 0 6px 28px var(--glow); transform: translateY(-1px); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.card-tag {
+  display: inline-block; font-size: 10px; font-weight: 400; letter-spacing: 1px;
+  padding: 2px 12px; border-radius: 12px; margin-bottom: 10px;
+  background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--border);
+}
+.card-tag[data-tag="默认"] { border-color: rgba(138,155,168,.2); color: var(--muted-blue); }
+.card-tag[data-tag="学习"] { border-color: rgba(143,158,140,.2); color: var(--muted-green); }
+.card-tag[data-tag="日常"] { border-color: rgba(184,149,122,.2); color: var(--muted-clay); }
+.card-tag[data-tag="技术"] { border-color: rgba(138,155,168,.2); color: var(--muted-blue); }
+.card-tag[data-tag="灵感"] { border-color: rgba(155,142,168,.2); color: var(--muted-lavender); }
+.card-tag[data-tag="心情"] { border-color: rgba(168,136,138,.2); color: var(--muted-mauve); }
+.card-title {
+  font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 8px;
+  line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-content {
+  font-size: 14px; line-height: 1.7; color: var(--text);
+  white-space: pre-wrap; word-break: break-word; font-weight: 300;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card.has-title .card-content { font-size: 13px; color: var(--text-mid); -webkit-line-clamp: 3; }
+.card-time { font-size: 11px; color: var(--text-dim); margin-top: 12px; font-weight: 300; letter-spacing: .3px; }
+.card-actions {
+  position: absolute; top: 14px; right: 14px; opacity: 0; transition: opacity .25s; display: flex; gap: 4px;
+}
+.card:hover .card-actions { opacity: 1; }
+.card-actions button {
+  width: 28px; height: 28px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card-bg); color: var(--text-mid); font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .2s; backdrop-filter: blur(4px);
+}
+.card-actions .edit-btn:hover { background: rgba(138,155,168,.12); color: var(--muted-blue); border-color: var(--muted-blue); }
+.card-actions .delete-btn:hover { background: rgba(168,136,138,.12); color: var(--muted-mauve); border-color: var(--muted-mauve); }
+.empty { grid-column: 1/-1; text-align: center; padding: 80px 20px; color: var(--text-dim); font-size: 14px; font-weight: 300; letter-spacing: 1px; }
+.empty .icon { font-size: 32px; display: block; margin-bottom: 14px; opacity: .25; }
+.float-view {
+  display: none; position: fixed; inset: 0; background: rgba(44,40,36,.3);
+  backdrop-filter: blur(8px); z-index: 100; align-items: center; justify-content: center;
+}
+.float-view.show { display: flex; }
+.float-view .modal {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+  padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px var(--shadow); position: relative;
+}
+.float-view .modal .float-tag { font-size: 12px; color: var(--text-mid); letter-spacing: 1px; margin-bottom: 14px; }
+.float-view .modal .float-title { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 12px; line-height: 1.4; }
+.float-view .modal .float-content { font-size: 15px; line-height: 1.8; color: var(--text); font-weight: 300; white-space: pre-wrap; }
+.float-view .modal .float-time { font-size: 12px; color: var(--text-dim); margin-top: 16px; font-weight: 300; }
+.float-view .modal .float-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px; font-family: inherit; }
+.float-view .modal .float-close:hover { color: var(--text); }
+.overlay {
+  display: none; position: fixed; inset: 0; background: rgba(44,40,36,.3);
+  backdrop-filter: blur(8px); z-index: 101; align-items: center; justify-content: center;
+}
+.overlay.show { display: flex; }
+.modal {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+  padding: 28px; width: 90%; max-width: 440px; box-shadow: 0 20px 60px var(--shadow);
+}
+.modal h2 { font-size: 15px; font-weight: 400; color: var(--text); margin-bottom: 18px; letter-spacing: 1px; }
+.modal .edit-title {
+  width: 100%; height: 38px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 14px; color: var(--text); font-size: 14px;
+  font-family: inherit; outline: none; margin-bottom: 12px;
+}
+.modal .edit-title:focus { border-color: var(--muted-rose); }
+.modal textarea {
+  width: 100%; height: 120px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px; color: var(--text); font-size: 14px;
+  font-family: inherit; resize: vertical; outline: none; margin-bottom: 14px;
+}
+.modal textarea:focus { border-color: var(--muted-rose); }
+.modal select {
+  width: 100%; height: 38px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 14px; color: var(--text); font-size: 12px;
+  font-family: inherit; outline: none; cursor: pointer; margin-bottom: 18px;
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions button {
+  padding: 8px 20px; border: 1px solid var(--border); border-radius: 12px;
+  font-size: 13px; font-family: inherit; cursor: pointer; transition: all .2s;
+  background: var(--bg); color: var(--text); font-weight: 300; letter-spacing: .5px;
+}
+.modal-actions .btn-save { background: var(--accent); }
+.modal-actions .btn-save:hover { background: var(--tag-bg); border-color: var(--muted-rose); }
+.modal-actions button:hover { background: var(--tag-bg); }
+.footer { max-width: 100%; margin: 40px auto 0; text-align: center; font-size: 11px; color: var(--text-dim); letter-spacing: 2px; font-weight: 300; }
+@media (max-width: 768px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; position: static; max-height: none; } }
+@media (max-width: 520px) {
+  body { padding: 24px 16px; } .wall { grid-template-columns: 1fr; }
+  .header { flex-direction: column; gap: 6px; } .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar .search-box { min-width: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="main-layout">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-title">📋 記憶列表</div>
+    <div id="sidebarList"></div>
+  </div>
+  <div class="content-area">
+    <div class="header">
+      <h1><span class="mark"></span>記憶·牆</h1>
+      <div class="stats-wrap">
+        <span class="stats" id="stats">0</span>
+        <button class="theme-btn" id="themeBtn">☀️ 晝</button>
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-top">
+        <input type="text" class="input-title" id="noteTitle" placeholder="標題（選填）…">
+        <div class="input-options">
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="modeShort">短文</button>
+            <button class="mode-btn" id="modeLong">長文</button>
+          </div>
+        </div>
+      </div>
+      <textarea id="newNote" placeholder="寫一條記憶…"></textarea>
+      <div class="input-bottom">
+        <select id="newTag">
+          <option value="默认">📌</option>
+          <option value="学习">📖</option>
+          <option value="日常">☕</option>
+          <option value="技术">⚙️</option>
+          <option value="灵感">💡</option>
+          <option value="心情">❤️</option>
+        </select>
+        <button id="addBtn">存</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="searchInput" placeholder="搜索記憶…">
+      </div>
+      <div class="filters" id="filters">
+        <span class="filter-tag active" data-tag="all">全部</span>
+      </div>
+    </div>
+    <div id="groupContainer"></div>
+    <div class="float-view" id="floatView">
+      <div class="modal">
+        <button class="float-close" id="floatClose">✕</button>
+        <div class="float-tag" id="floatTag"></div>
+        <div class="float-title" id="floatTitle"></div>
+        <div class="float-content" id="floatContent"></div>
+        <div class="float-time" id="floatTime"></div>
+      </div>
+    </div>
+    <div class="overlay" id="modal">
+      <div class="modal">
+        <h2>✎ 編輯</h2>
+        <input type="text" class="edit-title" id="editTitle" placeholder="標題（選填）">
+        <textarea id="editContent"></textarea>
+        <select id="editTag">
+          <option value="默认">📌 默认</option>
+          <option value="学习">📖 学习</option>
+          <option value="日常">☕ 日常</option>
+          <option value="技术">⚙️ 技术</option>
+          <option value="灵感">💡 灵感</option>
+          <option value="心情">❤️ 心情</option>
+        </select>
+        <div class="modal-actions">
+          <button id="cancelEdit">取消</button>
+          <button class="btn-save" id="saveEdit">保存</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer">✦ 莫蘭迪 · 晝夜自轉 ✦</div>
+  </div>
+</div>
+
+<script>
+// 手動晝夜按鈕
+let isNight = false;
+document.getElementById('themeBtn').onclick = function() {
+  isNight = !isNight;
+  document.documentElement.setAttribute('data-theme', isNight ? 'night' : 'day');
+  this.textContent = isNight ? '🌙 夜' : '☀️ 晝';
+};
+
+let inputMode = 'short';
+document.getElementById('modeShort').onclick = function() {
+  inputMode = 'short';
+  this.classList.add('active');
+  document.getElementById('modeLong').classList.remove('active');
+  document.getElementById('newNote').classList.remove('long-mode');
+};
+document.getElementById('modeLong').onclick = function() {
+  inputMode = 'long';
+  this.classList.add('active');
+  document.getElementById('modeShort').classList.remove('active');
+  document.getElementById('newNote').classList.add('long-mode');
+};
+
+let notes = JSON.parse(localStorage.getItem('morandi_wall')) || [];
+let filter = 'all';
+let search = '';
+let editId = null;
+const icons = {'默认':'📌','学习':'📖','日常':'☕','技术':'⚙️','灵感':'💡','心情':'❤️'};
+const order = ['默认','学习','日常','技术','灵感','心情'];
+
+function save() { localStorage.setItem('morandi_wall', JSON.stringify(notes)); }
+
+function renderSidebar() {
+  const list = document.getElementById('sidebarList');
+  let items = [...notes].reverse();
+  if (filter !== 'all') items = items.filter(n => n.tag === filter);
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    items = items.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+  }
+  if (!items.length) { list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px;">暫無記憶</div>'; return; }
+  list.innerHTML = items.map(n => {
+    const t = n.title || (n.content.slice(0,20)+(n.content.length>20?'…':''));
+    const p = n.title ? n.content.slice(0,30)+(n.content.length>30?'…':'') : '';
+    const c = n.title ? '' : 'no-title';
+    return '<div class="sidebar-item" data-id="'+n.id+'"><div class="s-title '+c+'">'+t+'</div>'+(p?'<div class="s-preview">'+p+'</div>':'')+'<span class="s-tag">'+(n.tag||'默认')+'</span></div>';
+  }).join('');
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.onclick = function() {
+      const id = parseInt(this.dataset.id);
+      const n = notes.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('floatTag').textContent = (icons[n.tag||'默认']||'')+' '+(n.tag||'默认');
+      document.getElementById('floatTitle').textContent = n.title||'';
+      document.getElementById('floatTitle').style.display = n.title ? 'block' : 'none';
+      document.getElementById('floatContent').textContent = n.content;
+      const d = new Date(n.time);
+      document.getElementById('floatTime').textContent = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('floatView').classList.add('show');
+    };
+  });
+}
+
+function render() {
+  const c = document.getElementById('groupContainer');
+  document.getElementById('stats').textContent = notes.length + ' 條';
+  let list = notes;
+  if (filter !== 'all') list = list.filter(n => n.tag === filter);
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    list = list.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+  }
+  const groups = {};
+  list.forEach(n => { const t = n.tag||'默认'; if(!groups[t]) groups[t]=[]; groups[t].push(n); });
+  const keys = order.filter(k => groups[k]);
+  if (!keys.length) { c.innerHTML = '<div class="wall"><div class="empty"><span class="icon">✧</span>還沒有記憶<br>寫一條吧</div></div>'; renderSidebar(); return; }
+  let html = '';
+  keys.forEach(tag => {
+    const items = groups[tag];
+    html += '<div class="section-title"><span>'+icons[tag]+' '+tag+'</span><span class="count">'+items.length+'</span><span class="line"></span></div><div class="wall">';
+    items.forEach(n => {
+      const d = new Date(n.time);
+      const t = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      const et = n.tag||'默认';
+      const hc = n.title ? 'card has-title' : 'card';
+      html += '<div class="'+hc+'" data-id="'+n.id+'"><span class="card-tag" data-tag="'+et+'">'+icons[et]+' '+et+'</span>';
+      if (n.title) html += '<div class="card-title">'+n.title+'</div>';
+      html += '<div class="card-content">'+n.content.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div><div class="card-time">'+t+'</div><div class="card-actions"><button class="edit-btn" data-id="'+n.id+'">✎</button><button class="delete-btn" data-id="'+n.id+'">✕</button></div></div>';
+    });
+    html += '</div>';
+  });
+  c.innerHTML = html;
+  document.querySelectorAll('.card').forEach(el => {
+    el.onclick = function(e) {
+      if (e.target.closest('.card-actions')) return;
+      const id = parseInt(this.dataset.id);
+      const n = notes.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('floatTag').textContent = (icons[n.tag||'默认']||'')+' '+(n.tag||'默认');
+      document.getElementById('floatTitle').textContent = n.title||'';
+      document.getElementById('floatTitle').style.display = n.title ? 'block' : 'none';
+      document.getElementById('floatContent').textContent = n.content;
+      const d = new Date(n.time);
+      document.getElementById('floatTime').textContent = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('floatView').classList.add('show');
+    };
+  });
+  document.querySelectorAll('.edit-btn').forEach(b => b.onclick = (e) => { e.stopPropagation(); openEdit(+b.dataset.id); });
+  document.querySelectorAll('.delete-btn').forEach(b => b.onclick = (e) => { e.stopPropagation(); notes = notes.filter(x => x.id !== +b.dataset.id); save(); render(); flt(); renderSidebar(); });
+  renderSidebar();
+}
+
+document.getElementById('floatClose').onclick = () => { document.getElementById('floatView').classList.remove('show'); };
+document.getElementById('floatView').onclick = (e) => { if (e.target === document.getElementById('floatView')) document.getElementById('floatView').classList.remove('show'); };
+
+function add() {
+  const ta = document.getElementById('newNote');
+  const title = document.getElementById('noteTitle').value.trim();
+  const c = ta.value.trim();
+  if (!c) return;
+  const note = { id: Date.now(), content: c, tag: document.getElementById('newTag').value, time: Date.now() };
+  if (title) note.title = title;
+  notes.unshift(note);
+  save();
+  ta.value = '';
+  document.getElementById('noteTitle').value = '';
+  render();
+  flt();
+}
+
+function openEdit(id) {
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  editId = id;
+  document.getElementById('editTitle').value = n.title || '';
+  document.getElementById('editContent').value = n.content;
+  document.getElementById('editTag').value = n.tag;
+  document.getElementById('modal').classList.add('show');
+}
+
+document.getElementById('cancelEdit').onclick = () => { document.getElementById('modal').classList.remove('show'); editId = null; };
+document.getElementById('saveEdit').onclick = () => {
+  if (!editId) return;
+  const c = document.getElementById('editContent').value.trim();
+  if (!c) return;
+  const n = notes.find(x => x.id === editId);
+  if (n) { n.title = document.getElementById('editTitle').value.trim()||''; n.content = c; n.tag = document.getElementById('editTag').value; n.time = Date.now(); save(); }
+  document.getElementById('modal').classList.remove('show');
+  editId = null;
+  render();
+  flt();
+};
+
+function flt() {
+  const tags = new Set(notes.map(n => n.tag));
+  let h = '<span class="filter-tag '+(filter==='all'?'active':'')+'" data-tag="all">全部</span>';
+  order.forEach(t => { if (tags.has(t)) h += '<span class="filter-tag '+(filter===t?'active':'')+'" data-tag="'+t+'">'+icons[t]+' '+t+'</span>'; });
+  document.getElementById('filters').innerHTML = h;
+  document.querySelectorAll('.filter-tag').forEach(el => {
+    el.onclick = () => { filter = el.dataset.tag; document.querySelectorAll('.filter-tag').forEach(e => e.classList.remove('active')); el.classList.add('active'); render(); };
+  });
+}
+
+document.getElementById('searchInput').oninput = (e) => { search = e.target.value; render(); renderSidebar(); };
+document.getElementById('newNote').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add(); } };
+document.getElementById('addBtn').onclick = add;
+
+render();
+flt();
+</script>
+</body>
+</html>
