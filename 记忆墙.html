@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>記憶牆</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="記憶牆">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #fdfdf9; --card-bg: #ffffff; --text: #4a4036;
+  --text-dim: rgba(74,64,54,0.18); --text-mid: rgba(74,64,54,0.35);
+  --border: rgba(74,64,54,0.08); --accent: rgba(74,64,54,0.03);
+  --placeholder: rgba(74,64,54,0.12); --tag-bg: rgba(74,64,54,0.04);
+  --tag-text: rgba(74,64,54,0.4); --input-bg: rgba(255,255,255,0.8);
+  --shadow: rgba(74,64,54,0.04);
+  --muted-blue: #7a8f9e; --muted-rose: #b0857c;
+  --muted-green: #7e907a; --muted-clay: #a8856e;
+  --muted-lavender: #8d7f9e; --muted-mauve: #9a7a7e;
+  --glow: rgba(176,133,124,0.08);
+}
+.hamburger {
+  display: none; width: 34px; height: 34px; border: none; background: var(--card-bg);
+  border-radius: 10px; cursor: pointer; align-items: center; justify-content: center;
+  color: var(--text); font-size: 18px; border: 1px solid var(--border);
+  transition: all .2s; flex-shrink: 0;
+}
+.hamburger:hover { border-color: var(--muted-rose); }
+[data-theme="night"] {
+  --bg: #1a1a1e; --card-bg: #222226; --text: #d4cfc8;
+  --text-dim: rgba(212,207,200,0.18); --text-mid: rgba(212,207,200,0.35);
+  --border: rgba(212,207,200,0.04); --accent: rgba(212,207,200,0.04);
+  --placeholder: rgba(212,207,200,0.1); --tag-bg: rgba(212,207,200,0.03);
+  --tag-text: rgba(212,207,200,0.3); --input-bg: rgba(34,34,38,0.8);
+  --shadow: rgba(0,0,0,0.25);
+  --muted-blue: #768894; --muted-rose: #a07e78;
+  --muted-green: #7a8a78; --muted-clay: #a07e68;
+  --muted-lavender: #847a94; --muted-mauve: #8a7478;
+  --glow: rgba(138,123,118,0.06);
+}
+body {
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system,'PingFang SC','Noto Sans SC',sans-serif;
+  min-height: 100vh; transition: background .5s,color .5s;
+  padding: 40px 24px; line-height: 1.6;
+}
+.main-layout {
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  padding-left: 0;
+}
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  border-radius: 0 18px 18px 0;
+  padding: 40px 14px 24px;
+  max-height: 100vh;
+  z-index: 10;
+  border-left: none;
+  box-shadow: 4px 0 20px var(--shadow);
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+.sidebar-title {
+  font-size: 13px; font-weight: 400; letter-spacing: 1px; color: var(--text-mid);
+  padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px;
+}
+.sidebar-item {
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  transition: all .2s; margin-bottom: 4px; border: 1px solid transparent;
+}
+.sidebar-item:hover { background: var(--tag-bg); border-color: var(--muted-rose); }
+.sidebar-item .s-title {
+  font-size: 13px; font-weight: 400; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-item .s-title.no-title { color: var(--text-mid); font-weight: 300; }
+.sidebar-item .s-preview {
+  font-size: 11px; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+}
+.sidebar-item .s-tag {
+  display: inline-block; font-size: 9px; padding: 1px 8px;
+  border-radius: 8px; background: var(--tag-bg); color: var(--tag-text); margin-top: 4px;
+}
+.content-area {
+  flex: 1;
+  min-width: 0;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-left: 200px;
+}
+.header {
+  max-width: 100%; margin: 0 auto 36px;
+  display: flex; justify-content: space-between; align-items: baseline; position: relative;
+}
+.header::after {
+  content: ''; position: absolute; bottom: -10px; left: 0; right: 0;
+  height: 1px; background: var(--border);
+}
+.header h1 {
+  font-size: 20px; font-weight: 400; letter-spacing: 3px; color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+.header h1 .mark {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted-rose); opacity: .5;
+}
+.header .stats-wrap { display: flex; align-items: center; gap: 12px; }
+.stats { font-size: 12px; color: var(--text-mid); letter-spacing: 1px; font-weight: 300; }
+.theme-btn {
+  background: none; border: 1px solid var(--border); border-radius: 10px;
+  padding: 4px 12px; font-size: 12px; font-family: inherit;
+  color: var(--text-mid); cursor: pointer; letter-spacing: 1px; transition: all .2s;
+}
+.theme-btn:hover { border-color: var(--muted-rose); color: var(--text); }
+.input-row {
+  max-width: 100%; margin: 0 auto 24px; display: flex; flex-direction: column; gap: 8px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px;
+  padding: 14px 14px 12px; transition: all .25s; box-shadow: 0 4px 20px var(--shadow);
+}
+.input-row:focus-within { border-color: var(--muted-rose); box-shadow: 0 4px 28px var(--glow); }
+.input-row .input-top { display: flex; gap: 8px; align-items: center; }
+.input-row .input-title {
+  flex: 1; height: 36px; background: transparent; border: none; color: var(--text);
+  font-size: 14px; font-family: inherit; outline: none; line-height: 36px; font-weight: 400;
+}
+.input-row .input-title::placeholder { color: var(--placeholder); font-weight: 300; }
+.input-row .input-options { display: flex; gap: 6px; align-items: center; }
+.mode-toggle {
+  display: flex; gap: 2px; background: var(--tag-bg);
+  border-radius: 10px; padding: 2px; border: 1px solid var(--border);
+}
+.mode-btn {
+  padding: 4px 12px; border: none; border-radius: 8px; font-size: 11px;
+  font-family: inherit; cursor: pointer; transition: all .2s;
+  background: transparent; color: var(--text-mid); letter-spacing: .5px;
+}
+.mode-btn.active { background: var(--card-bg); color: var(--text); box-shadow: 0 1px 4px var(--shadow); }
+.input-row textarea {
+  width: 100%; background: transparent; border: none; color: var(--text);
+  font-size: 14px; font-family: inherit; resize: vertical; outline: none;
+  line-height: 1.6; padding: 0; min-height: 38px; transition: min-height .2s;
+}
+.input-row textarea.long-mode { min-height: 180px; }
+.input-row textarea::placeholder { color: var(--placeholder); font-weight: 300; }
+.input-row .input-bottom { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.input-row select {
+  height: 36px; background: var(--tag-bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 10px; color: var(--text-mid); font-size: 12px;
+  font-family: inherit; outline: none; cursor: pointer; min-width: 44px;
+  appearance: none; text-align: center; transition: all .2s;
+}
+.input-row select:hover { border-color: var(--muted-rose); }
+.input-row button {
+  height: 36px; padding: 0 18px; background: var(--accent); border: 1px solid var(--border);
+  border-radius: 14px; color: var(--text); font-size: 13px; font-family: inherit;
+  cursor: pointer; letter-spacing: 1px; transition: all .25s; white-space: nowrap; font-weight: 300;
+}
+.input-row button:hover { background: var(--tag-bg); border-color: var(--muted-rose); }
+.toolbar { max-width: 100%; margin: 0 auto 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.search-box { flex: 1; min-width: 180px; margin: 0; position: relative; }
+.search-box input {
+  width: 100%; height: 38px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 20px; padding: 0 18px 0 40px; color: var(--text); font-size: 13px;
+  font-family: inherit; outline: none; transition: all .25s; box-shadow: 0 2px 12px var(--shadow);
+}
+.search-box input:focus { border-color: var(--muted-rose); box-shadow: 0 2px 16px var(--glow); }
+.search-box input::placeholder { color: var(--placeholder); font-weight: 300; }
+.search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: var(--text-dim); pointer-events: none;
+}
+.filters { display: flex; gap: 6px; flex-wrap: wrap; max-width: none; margin: 0; }
+.filter-tag {
+  padding: 4px 14px; border-radius: 20px; font-size: 12px; color: var(--text-mid);
+  background: var(--card-bg); border: 1px solid var(--border); cursor: pointer;
+  transition: all .25s; letter-spacing: .5px; font-weight: 300; box-shadow: 0 1px 6px var(--shadow);
+}
+ border-color: var(--muted-rose); }
+.filter-tag.active { color: var(--text); background: var(--tag-bg); border-color: var(--muted-rose); }
+.data-actions { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.data-btn {
+  padding: 4px 12px; border-radius: 20px; font-size: 11px; color: var(--text-mid);
+  background: var(--card-bg); border: 1px solid var(--border); cursor: pointer;
+  transition: all .25s; letter-spacing: .5px; font-weight: 300; font-family: inherit;
+  box-shadow: 0 1px 6px var(--shadow); white-space: nowrap;
+}
+.data-btn:hover { border-color: var(--muted-rose); color: var(--text); }
+.section-title {
+  max-width: 100%; margin: 28px auto 12px; display: flex; align-items: center;
+  gap: 10px; font-size: 14px; color: var(--text-mid); letter-spacing: 1.5px; font-weight: 300;
+}
+.section-title .line { flex: 1; height: 1px; background: var(--border); }
+.section-title .count { font-size: 11px; color: var(--text-dim); font-weight: 300; }
+.wall { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 12px; }
+.card {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px;
+  padding: 20px 22px; transition: all .3s; position: relative; animation: cardIn .35s;
+  box-shadow: 0 4px 20px var(--shadow); cursor: pointer;
+}
+.card:hover { border-color: var(--muted-rose); box-shadow: 0 6px 28px var(--glow); transform: translateY(-1px); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.card-tag {
+  display: inline-block; font-size: 10px; font-weight: 400; letter-spacing: 1px;
+  padding: 2px 12px; border-radius: 12px; margin-bottom: 10px;
+  background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--border);
+}
+.card-tag[data-tag="默认"] { border-color: rgba(138,155,168,.2); color: var(--muted-blue); }
+.card-tag[data-tag="学习"] { border-color: rgba(143,158,140,.2); color: var(--muted-green); }
+.card-tag[data-tag="日常"] { border-color: rgba(184,149,122,.2); color: var(--muted-clay); }
+.card-tag[data-tag="技术"] { border-color: rgba(138,155,168,.2); color: var(--muted-blue); }
+.card-tag[data-tag="灵感"] { border-color: rgba(155,142,168,.2); color: var(--muted-lavender); }
+.card-tag[data-tag="心情"] { border-color: rgba(168,136,138,.2); color: var(--muted-mauve); }
+.card-title {
+  font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 8px;
+  line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-content {
+  font-size: 14px; line-height: 1.7; color: var(--text);
+  white-space: pre-wrap; word-break: break-word; font-weight: 300;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card.has-title .card-content { font-size: 13px; color: var(--text-mid); -webkit-line-clamp: 3; }
+.card-time { font-size: 11px; color: var(--text-dim); margin-top: 12px; font-weight: 300; letter-spacing: .3px; }
+.card-actions {
+  position: absolute; top: 14px; right: 14px; opacity: 0; transition: opacity .25s; display: flex; gap: 4px;
+}
+.card:hover .card-actions { opacity: 1; }
+.card-actions button {
+  width: 28px; height: 28px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card-bg); color: var(--text-mid); font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .2s; backdrop-filter: blur(4px);
+}
+.card-actions .edit-btn:hover { background: rgba(138,155,168,.12); color: var(--muted-blue); border-color: var(--muted-blue); }
+.card-actions .delete-btn:hover { background: rgba(168,136,138,.12); color: var(--muted-mauve); border-color: var(--muted-mauve); }
+.empty { grid-column: 1/-1; text-align: center; padding: 80px 20px; color: var(--text-dim); font-size: 14px; font-weight: 300; letter-spacing: 1px; }
+.empty .icon { font-size: 32px; display: block; margin-bottom: 14px; opacity: .25; }
+.float-view {
+  display: none; position: fixed; inset: 0; background: rgba(44,40,36,.3);
+  backdrop-filter: blur(8px); z-index: 100; align-items: center; justify-content: center;
+}
+.float-view.show { display: flex; }
+.float-view .modal {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+  padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px var(--shadow); position: relative;
+}
+.float-view .modal .float-tag { font-size: 12px; color: var(--text-mid); letter-spacing: 1px; margin-bottom: 14px; }
+.float-view .modal .float-title { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 12px; line-height: 1.4; }
+.float-view .modal .float-content { font-size: 15px; line-height: 1.8; color: var(--text); font-weight: 300; white-space: pre-wrap; }
+.float-view .modal .float-time { font-size: 12px; color: var(--text-dim); margin-top: 16px; font-weight: 300; }
+.float-view .modal .float-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px; font-family: inherit; }
+.float-view .modal .float-close:hover { color: var(--text); }
+.overlay {
+  display: none; position: fixed; inset: 0; background: rgba(44,40,36,.3);
+  backdrop-filter: blur(8px); z-index: 101; align-items: center; justify-content: center;
+}
+.overlay.show { display: flex; }
+.modal {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+  padding: 28px; width: 90%; max-width: 440px; box-shadow: 0 20px 60px var(--shadow);
+}
+.modal h2 { font-size: 15px; font-weight: 400; color: var(--text); margin-bottom: 18px; letter-spacing: 1px; }
+.modal .edit-title {
+  width: 100%; height: 38px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 14px; color: var(--text); font-size: 14px;
+  font-family: inherit; outline: none; margin-bottom: 12px;
+}
+.modal .edit-title:focus { border-color: var(--muted-rose); }
+.modal textarea {
+  width: 100%; height: 120px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px; color: var(--text); font-size: 14px;
+  font-family: inherit; resize: vertical; outline: none; margin-bottom: 14px;
+}
+.modal textarea:focus { border-color: var(--muted-rose); }
+.modal select {
+  width: 100%; height: 38px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 14px; color: var(--text); font-size: 12px;
+  font-family: inherit; outline: none; cursor: pointer; margin-bottom: 18px;
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions button {
+  padding: 8px 20px; border: 1px solid var(--border); border-radius: 12px;
+  font-size: 13px; font-family: inherit; cursor: pointer; transition: all .2s;
+  background: var(--bg); color: var(--text); font-weight: 300; letter-spacing: .5px;
+}
+.modal-actions .btn-save { background: var(--accent); }
+.modal-actions .btn-save:hover { background: var(--tag-bg); border-color: var(--muted-rose); }
+.modal-actions button:hover { background: var(--tag-bg); }
+.footer { max-width: 100%; margin: 40px auto 0; text-align: center; font-size: 11px; color: var(--text-dim); letter-spacing: 2px; font-weight: 300; }
+@media (max-width: 768px) {
+  .main-layout { flex-direction: column; }
+  .content-area { padding-left: 0; }
+  body { padding: 16px 12px; }
+  .sidebar {
+    position: fixed; left: -280px; top: 0; width: 260px; height: 100vh;
+    z-index: 110; transition: left .3s ease; display: flex; flex-direction: column;
+    border-radius: 0 18px 18px 0; padding: 24px 14px 24px;
+    box-shadow: 4px 0 30px rgba(0,0,0,.15); background: var(--card-bg);
+    border-right: 1px solid var(--border); overflow-y: auto;
+  }
+  .sidebar.open { left: 0; }
+  .sidebar-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3);
+    z-index: 109;
+  }
+  .sidebar-backdrop.show { display: block; }
+  .hamburger { display: flex; }
+  .header h1 { font-size: 17px; }
+  .header .stats-wrap { gap: 8px; }
+  .input-row { padding: 10px 10px 10px; }
+  .input-row .input-title { font-size: 13px; }
+  .input-row textarea { font-size: 13px; }
+  .card { padding: 16px 18px; }
+  .card-title { font-size: 14px; }
+  .card-content { font-size: 13px; }
+  .section-title { font-size: 13px; margin: 20px auto 10px; }
+  .filter-tag { padding: 6px 14px; font-size: 12px; }
+  .search-box input { height: 40px; font-size: 14px; }
+  .wall { grid-template-columns: 1fr; gap: 10px; }
+  .header .hamburger { display: flex; }
+  .float-view .modal { width: 95%; padding: 20px; }
+}
+@media (max-width: 520px) {
+  body { padding: 12px 8px; }
+  .header h1 { font-size: 15px; letter-spacing: 1px; }
+  .header { flex-direction: row; gap: 4px; flex-wrap: wrap; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar .search-box { min-width: 0; }
+  .data-actions { margin-left: 0; }
+  .data-btn { padding: 6px 14px; font-size: 12px; }
+  .wall { gap: 8px; }
+  .card { padding: 14px 14px; border-radius: 14px; }
+  .input-row { border-radius: 14px; padding: 8px 10px 10px; }
+  .sidebar { width: 240px; left: -260px; }
+  .mode-btn { padding: 6px 10px; font-size: 11px; }
+  .stats { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<div class="main-layout">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-title">📋 記憶列表</div>
+    <div id="sidebarList"></div>
+  </div>
+  <div class="content-area">
+    <div class="header">
+      <h1><button class="hamburger" id="hamburgerBtn">☰</button><span class="mark"></span>記憶·牆</h1>
+      <div class="stats-wrap">
+        <span class="stats" id="stats">0</span>
+        <button class="theme-btn" id="themeBtn">☀️ 晝</button>
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-top">
+        <input type="text" class="input-title" id="noteTitle" placeholder="標題（選填）…">
+        <div class="input-options">
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="modeShort">短文</button>
+            <button class="mode-btn" id="modeLong">長文</button>
+          </div>
+        </div>
+      </div>
+      <textarea id="newNote" placeholder="寫一條記憶…"></textarea>
+      <div class="input-bottom">
+        <select id="newTag">
+          <option value="默认">📌</option>
+          <option value="学习">📖</option>
+          <option value="日常">☕</option>
+          <option value="技术">⚙️</option>
+          <option value="灵感">💡</option>
+          <option value="心情">❤️</option>
+        </select>
+        <button id="addBtn">存</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="searchInput" placeholder="搜索記憶…">
+      </div>
+      <div class="filters" id="filters">
+        <span class="filter-tag active" data-tag="all">全部</span>
+      </div>
+      <div class="data-actions">
+        <button class="data-btn" id="exportBtn">↓ 导出</button>
+        <button class="data-btn" id="importBtn">↑ 导入</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+      </div>
+    </div>
+    <div id="groupContainer"></div>
+    <div class="float-view" id="floatView">
+      <div class="modal">
+        <button class="float-close" id="floatClose">✕</button>
+        <div class="float-tag" id="floatTag"></div>
+        <div class="float-title" id="floatTitle"></div>
+        <div class="float-content" id="floatContent"></div>
+        <div class="float-time" id="floatTime"></div>
+      </div>
+    </div>
+    <div class="overlay" id="modal">
+      <div class="modal">
+        <h2>✎ 編輯</h2>
+        <input type="text" class="edit-title" id="editTitle" placeholder="標題（選填）">
+        <textarea id="editContent"></textarea>
+        <select id="editTag">
+          <option value="默认">📌 默认</option>
+          <option value="学习">📖 学习</option>
+          <option value="日常">☕ 日常</option>
+          <option value="技术">⚙️ 技术</option>
+          <option value="灵感">💡 灵感</option>
+          <option value="心情">❤️ 心情</option>
+        </select>
+        <div class="modal-actions">
+          <button id="cancelEdit">取消</button>
+          <button class="btn-save" id="saveEdit">保存</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer">✦ 莫蘭迪 · 晝夜自轉 ✦</div>
+  </div>
+</div>
+
+<script>
+// 手動晝夜按鈕
+let isNight = false;
+document.getElementById('themeBtn').onclick = function() {
+  isNight = !isNight;
+  document.documentElement.setAttribute('data-theme', isNight ? 'night' : 'day');
+  this.textContent = isNight ? '🌙 夜' : '☀️ 晝';
+};
+
+let inputMode = 'short';
+document.getElementById('modeShort').onclick = function() {
+  inputMode = 'short';
+  this.classList.add('active');
+  document.getElementById('modeLong').classList.remove('active');
+  document.getElementById('newNote').classList.remove('long-mode');
+};
+document.getElementById('modeLong').onclick = function() {
+  inputMode = 'long';
+  this.classList.add('active');
+  document.getElementById('modeShort').classList.remove('active');
+  document.getElementById('newNote').classList.add('long-mode');
+};
+
+let notes = JSON.parse(localStorage.getItem('morandi_wall')) || [];
+// Auto-merge seed entries by id to ensure knowledge base is always present
+(function() {
+  const seed = [
+    {id:3,title:'AI核心概念底层解析',content:'从工程视角拆解10个核心概念：\nLLM本质=文字接龙游戏，逐token预测下一个字\nTokenizer=翻译官，负责文字数字互转\nContext Window=模型临时记忆容量上限\nRAG=用检索替代全量输入，节省成本\nSystem Prompt=设人设规则，User Prompt=描述任务\nTool=外部函数，模型选工具+平台调用\nMCP=工具统一接入标准(Type-C接口)\nAgent=能自主规划+调用工具直到解决问题',tag:'技术',time:Date.now()-86400000*3+300},
+    {id:4,title:'Agent四大核心概念解析',content:'Agent vs 普通聊天：Agent能自主拆解任务并自动执行。\n四大核心：\n1.LLM=大脑负责决策\n2.MCP=工具协议Type-C接口(递技能清单-按格式打包需求-外部执行转纯文本)\n3.Memory=短期(当前任务上下文)+长期(用户偏好)\n4.Skill=封装高频复杂流程减少token消耗\n\n补充：API=跨厂商模型直连通道，可用API Key调用国产模型。\n完整闭环：LLM思考->Memory记忆->Skill执行->MCP调工具->结果反馈->LLM再思考',tag:'技术',time:Date.now()-86400000*3+400},
+    {id:12,title:'用好AI的核心工作流',content:'实战向建议：打开Claude Code的plan mode > 语音录制10分钟以上想做的事 > 飞书妙记转文字 > 让AI读完后再追问细节直到搞清楚怎么实现。\n关键点：用语音打破打字门槛、让AI主动提问收敛需求。',tag:'技术',time:Date.now()-86400000*2+1200},
+    {id:18,title:'AI反向提问Prompt技巧',content:'核心Prompt：请你在回答前先问我问题，一次只问一个，直到你有95%信心理解我的真实需求。\n高赞改进版增加了查阅文献的要求。本质是苏格拉底诘问法。',tag:'技术',time:Date.now()-86400000+1800},
+    {id:5,title:'Agent Skill实战工具集',content:'四大类工具：\n元能力：Skill Creator(白话描述自动生成Skill)、Find Skills(全网搜+一键装)\n工程化：Superpowers(TDD红绿重构+两轮审计)、gStack(YC总裁开发,23+专家角色多视角审计)、前端大神Skill(需求拷问/分诊/架构急救)\n前端设计：frontend-design(Anthropic官方,50+设计规范)、UI/UX Pro Max(160+行业规则)\n内容创作：cover-image(五维参数控封面)、信息图(21种布局)、xhs-images(卡通轮播卡)、markdown-to-html(公众号排版)、翻译(分析翻译校订润色)、跨平台发布(微信微博一键分发)',tag:'技术',time:Date.now()-86400000*2+500},
+    {id:7,title:'Claudio AI电台（项目灵感）',content:'24小时在线AI电台，集播放器+聊天于一体。后端连接Claude+音乐API+天气API+飞书API，前端有播放器界面。创作者将14年3000+歌单结构化输入，能根据天气/日程/心情定制歌单。\n\nGitHub: github.com/bingyanglu/Claudio-FM | Stars:24 | JavaScript\n与你项目清单中一起听歌方案(ncm-cli+MCP)思路相似。',tag:'灵感',time:Date.now()-86400000*2+700},
+    {id:14,title:'Claude Code记忆架构: Auto Memory与Auto Dream',content:'四层记忆系统：\n第一层 CLAUDE.md(手写指令,最高权限)\n第二层 Auto Memory(自动笔记,按项目隔离)\n第三层 Session Memory(单次对话上下文)\n第四层 Auto Dream(后台记忆巩固层)\n\nAuto Dream四步：Orient定向 > 搜集信号 > 巩固(合并矛盾/更新日期/删过时) > 修剪索引。\n与人类记忆巩固机制(海马体>深度睡眠回放>快速动眼期整合)同构。\n原始对话JSONL日志保留在本地，可翻旧账。',tag:'技术',time:Date.now()-86400000*2+1400},
+    {id:15,title:'ncm-cli+MCP控制网易云音乐教程',content:'四阶段：\n1.Mac终端安装ncm-cli，配置网易云API\n2.用Python+FastMCP封装成MCP服务器\n3.用Cloudflare Tunnel暴露到公网\n4.手机AI App连接MCP服务器\n直接对应你项目清单第4项一起听歌方案。',tag:'技术',time:Date.now()-86400000*2+1500},
+    {id:16,title:'Claude Code接入微信（个人助理系统）',content:'通过桥接将Claude Code接入微信。功能：内置时间系统(自动时间戳)、生活轨迹时间轴(记录每日活动)、随机轮询唤醒(AI判断是否主动联系用户)、本地提醒队列(AI可自设定时提醒)、日记系统(每晚主动写日记存本地,不消耗token)。\n已开源，复用微信官方龙虾助手二次开发，可用cc switch切换模型。\n\nGitHub: github.com/qufei1993/cc-weixin | Stars:141 | TypeScript\n与你miss_you_bot、Toast通知、晚安精灵方向相似。',tag:'技术',time:Date.now()-86400000+1600},
+    {id:17,title:'Skill测试三层次',content:'第一类：测试触发(应该触发/换种说法/不该触发)\n第二类：测试功能(做的事是否正确)\n第三类：测试价值(有无净收益)\n建议从困难任务开始测试，记录失败比成功更重要。可用于你的RikkaHub Skills优化。',tag:'技术',time:Date.now()-86400000+1700},
+    {id:22,title:'CoreCoder项目',content:'约1400行Python实现极简Claude Code核心功能，灵感来自Claude Code泄露源码。建议先读配套文档理解设计思想，再按自己想法魔改。对应你项目清单第12项。\n\nGitHub: github.com/he-yufeng/CoreCoder | Stars:1001 | Python\n描述: Minimal AI coding agent, works with any LLM. Think NanoGPT for coding agents.',tag:'技术',time:Date.now()-86400000+2200},
+    {id:23,title:'Agent开源项目与求职建议',content:'评论区推荐上手项目：\n1.nanobot(社群口碑最高) -> HKUDS/nanobot Stars:43320\n2.Rudder(Agent Team协作平台) -> Undertone0809/rudder Stars:93\n3.OpenDeer/DeerFlow(手搓可获得面试机会)\n4.复旦GA项目(轻量级高信息密度上下文agent)\n5.OpenClaw\n\n求职建议：Fork > 魔改 > 上传GitHub形成自己的项目，讲清楚项目背景比单纯堆砌项目更重要。',tag:'技术',time:Date.now()-86400000+2300},
+    {id:25,title:'2026年Claude Code十大必装Skill',content:'1.代码洁癖(整理项目) 2.Claude.md记忆(手动规范) 3.飞书CLI(操控飞书) 4.Auto Memory(自动记错) 5.子代理规划(拆解大型任务) 6.卡兹克风格创作 7.全平台内容同步 8.Git后悔药(操作前快照) 9.服务器巡检 10.法律Skill。\n建议按需装2-3个，避免干扰上下文。',tag:'技术',time:Date.now()-86400000+2500},
+    {id:26,title:'4个有趣实用的AI Skill案例',content:'1.前任聊天记录蒸馏成Persona进行对话\n2.输入人名生成以该人思维回答的Skill(女娲/Nuwa)\n3.众安家财险顾问(不推销的保险评估工具)\n4.一人创业者工具包(SEO/文案/设计/市场调研一体)',tag:'灵感',time:Date.now()-86400000+2600},
+    {id:32,title:'Claude Chat接入ElevenLabs语音合成',content:'在Claude Chat免费版中用ElevenLabs TTS。\n三步：1.生成音色描述+创建API Key\n2.Skills添加MCP Builder > Connectors添加elevenlabs player和elevenlabs agents mcp app并配置API Key\n3.把音色ID发给Claude让它用ElevenLabs说话\n注意：仅限Windows/Mac，手机无法使用；Chat版需手动点击播放(语音条效果)',tag:'技术',time:Date.now()-86400000+3200},
+    {id:19,title:'复现CV代码7要点',content:'1.不要从零开始(先找开源) 2.先验证张量形状(shape) 3.检查梯度流 4.用单Batch过拟合验证模型 5.Loss不对先查学习率和损失函数 6.注意图像归一化和颜色空间(RGB/BGR) 7.善用社区资源。需Python/深度学习基础。',tag:'技术',time:Date.now()-86400000+1900},
+    {id:21,title:'Claude Code源码解析: Agent设计架构',content:'核心机制：\nQueue循环(While循环+6阶段执行模型)\n7级错误恢复(从流式断线到整体token耗尽)\nTool协议对象(声明名称/描述/输入/只读/并发安全属性)\n5级上下文压缩策略(dream>microcomp>collapse>auto compact>session compact)\nSandbox+Permission双层安全管控\nHarness Engineering(Runtime才是核心，模型只是笔)',tag:'技术',time:Date.now()-86400000+2100},
+    {id:10,title:'GitHub大白话科普',content:'GitHub=全球最大免费代码仓库+协作平台+开源宝库。\n版本控制像游戏存档可回退、多人协作、免费开源资源、程序员作品集。',tag:'学习',time:Date.now()-86400000*2+1000},
+    {id:24,title:'GitHub新手入门实战',content:'环境准备(注册/安装Git/配置SSH) > 核心概念(Repo/Branch/Fork/PR/Issues) > 基础操作(clone/add/commit/push) > 高效协作技巧。\n与#10互补：#10讲是什么、这条讲怎么用。',tag:'学习',time:Date.now()-86400000+2400},
+    {id:8,title:'初中/入门级电学串讲',content:'从电荷到家庭用电完整链路：\n两种电荷(正/负)丝玻正毛橡负同斥异吸 > 三兄弟电流I(A)电压U(V)电阻R(Ω) > 欧姆定律I=U/R > 串联(I处处相等电压相加电阻越串越大)并联(V处处相等电流相加电阻越并越小) > 电功W=UIt=Pt电功率P=UI=W/t > 家庭电路220V并联开关接火线。',tag:'学习',time:Date.now()-86400000*2+800},
+    {id:9,title:'大专计算机专业入行建议',content:'大专学历计算机专业如何入行：先确定方向(游戏/软件开发)，小公司最爱应届生(便宜)，积累经验是关键，熟练掌握C++/Unity/AI/3D Max等工具。\n补充：招聘平台筛公司规模选最小一档就是小公司。',tag:'学习',time:Date.now()-86400000*2+900},
+    {id:11,title:'大学生简历制作教程',content:'从0到1用Word制作个性化简历。\n结构：个人信息 > 教育经历(课程+成绩+荣誉) > 实习经历(干了什么+量化成果+对工作支撑) > 项目经历 > 校园经历 > 自我总结(技能+语言+评价)。\n格式：小四标题正文字，分隔线分区，证件照浮于文字上方。',tag:'日常',time:Date.now()-86400000*2+1100},
+    {id:13,title:'科研写作AI助手系统提示词模板',content:'五个角色设定：\n1.科研写作教练(指正逻辑/结构/表达问题)\n2.学术语言润色者(精准克制表达)\n3.专业术语把关者\n4.文献风格分析器\n5.严谨性守门人\n\n另附研究构想驱动的文献检索与矩阵构建系统模板：问题结构化 > 文献检索策略 > 筛选分层 > 文献矩阵输出 > 开题支持建议。',tag:'技术',time:Date.now()-86400000*2+1300},
+    {id:29,title:'寓言写作Prompt框架',content:'完整寓言写作模板：\n寓言体感规范(篇幅1000字内/角色不超过3个/全程不出现概念名称)\n防套路自检清单(意象/地名/结构/角色/开头黑名单)\n切入角度建议(非人类视角/现代职业/微观尺度)\n输出格式(正文+概念解析+检验问题)',tag:'灵感',time:Date.now()-86400000+2900},
+    {id:30,title:'30天自我访谈Prompt框架',content:'AI扮演存在主义心理咨询师，每晚问3个问题由浅入深：\n第1周问日常 > 第2周问重复模式 > 第3周问价值观 > 第4周问恐惧。\n30天后整合输出5项总结：重复情绪词、自我描述角度、自我设限口头禅、真正想要的生活、一句话定义自己。',tag:'灵感',time:Date.now()-86400000+3000},
+    {id:28,title:'世界文学巡礼互动地图 / VibeCode技术宇宙',content:'两个构思中的项目：\n\n世界文学巡礼：互动地图呈现全球文学作品，将书籍与地理空间关联。古风手绘地图、书页式卡片弹窗、动态墨迹文字、丝路鎏金线路。\n\nVibeCode技术宇宙：3D星系风格互动知识页面。中心为编程风格演化树(传统开发>框架>AI辅助>Vibecoding)，环绕知识星辰按学习体验分区。节点可跳转GitHub/文档/Demo。',tag:'灵感',time:Date.now()-86400000+2800},
+    {id:6,title:'AI领域学习全景地图',content:'80+项技能列表，用于后续学习路径规划参考：\nAI基础认知、机器学习、Python、数据结构、API、JSON、Linux命令行、正则表达式、数据处理、数学基础(概率统计/线代/微积分)、Prompt工程、RAG、知识库构建、Agent、多模态AI、模型部署、MLOps/LLMOps、AI安全等。',tag:'学习',time:Date.now()-86400000*2+600},
+    {id:27,title:'全栈开发+AI完整技能地图',content:'8大领域：环境与终端、HTML/CSS、JavaScript与前端框架、后端与服务器、数据库与查询、用户登录与安全、部署与运维、AI与智能体。\n每个领域含具体问题和痛点。已标注最高优先级，要求必须掌握。\n已区分已懂和不懂的内容，待逐一攻克。',tag:'学习',time:Date.now()-86400000+2700},
+    {id:101,title:'no_ai_slop_writing_rules',content:'Claude Code反AI味写作规则集。24条规则+Louis Rossmann写作风格数据(分析51万词)，直接提升CLAUDE.md质量。\n链接: github.com/realrossmanngroup/no_ai_slop_writing_rules',tag:'技术',time:Date.now()-86400000*2+101},
+    {id:102,title:'guizang-social-card-skill',content:'Claude Code Skill插件，生成小红书图文组图和公众号封面对。双视觉系统(电子杂志风+瑞士国际主义)，28个版式骨架，10套主题。\n链接: github.com/op7418/guizang-social-card-skill | Stars:696',tag:'技术',time:Date.now()-86400000*2+102},
+    {id:103,title:'vibecode-pro-max-kit',content:'Spec-driven AI编码辅助框架。12个agent+32个技能，自改进上下文记忆，解决AI遗忘问题。\n链接: github.com/withkynam/vibecode-pro-max-kit | Stars:233',tag:'技术',time:Date.now()-86400000*2+103},
+    {id:104,title:'how-pi-agent-works',content:'Pi Agent原理与实现。中国开发者写的AI Agent技术讲解，对计算机专业学习有帮助。\n链接: github.com/cellinlab/how-pi-agent-works | Stars:109',tag:'学习',time:Date.now()-86400000*2+104},
+    {id:105,title:'linux-devmgmt',content:'用Qt6在Linux上复刻Windows设备管理器。底层通过sysfs/procfs读取真实硬件数据，支持Aero主题皮肤。\n链接: github.com/actuallyaridan/linux-devmgmt | Stars:102 | C++',tag:'技术',time:Date.now()-86400000*2+105},
+    {id:106,title:'gemini-web2api',content:'把Google Gemini网页版包装成OpenAI兼容API。单文件、免认证、跨平台。\n链接: github.com/Sophomoresty/gemini-web2api | Stars:166 | Python',tag:'技术',time:Date.now()-86400000*2+106},
+    {id:107,title:'PhenoPixel',content:'基于OpenCV的图像分析Web应用，部署于广岛大学。细胞轮廓分析、荧光显微镜成像。\n链接: github.com/ikeda042/PhenoPixel | Stars:241 | TypeScript',tag:'技术',time:Date.now()-86400000*2+107},
+  ];
+  const existingIds = new Set(notes.map(n => n.id));
+  seed.forEach(s => { if (!existingIds.has(s.id)) { notes.push(s); } });
+  save();
+})();
+let filter = 'all';
+let search = '';
+let editId = null;
+const icons = {'默认':'📌','学习':'📖','日常':'☕','技术':'⚙️','灵感':'💡','心情':'❤️'};
+const order = ['默认','学习','日常','技术','灵感','心情'];
+
+function save() { localStorage.setItem('morandi_wall', JSON.stringify(notes)); }
+
+function renderSidebar() {
+  const list = document.getElementById('sidebarList');
+  let items = [...notes].reverse();
+  if (filter !== 'all') items = items.filter(n => n.tag === filter);
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    items = items.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+  }
+  if (!items.length) { list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px;">暫無記憶</div>'; return; }
+  list.innerHTML = items.map(n => {
+    const t = n.title || (n.content.slice(0,20)+(n.content.length>20?'…':''));
+    const p = n.title ? n.content.slice(0,30)+(n.content.length>30?'…':'') : '';
+    const c = n.title ? '' : 'no-title';
+    return '<div class="sidebar-item" data-id="'+n.id+'"><div class="s-title '+c+'">'+t+'</div>'+(p?'<div class="s-preview">'+p+'</div>':'')+'<span class="s-tag">'+(n.tag||'默认')+'</span></div>';
+  }).join('');
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.onclick = function() {
+      const id = parseInt(this.dataset.id);
+      const n = notes.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('floatTag').textContent = (icons[n.tag||'默认']||'')+' '+(n.tag||'默认');
+      document.getElementById('floatTitle').textContent = n.title||'';
+      document.getElementById('floatTitle').style.display = n.title ? 'block' : 'none';
+      document.getElementById('floatContent').textContent = n.content;
+      const d = new Date(n.time);
+      document.getElementById('floatTime').textContent = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('floatView').classList.add('show');
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('show');
+    };
+  });
+}
+
+function render() {
+  const c = document.getElementById('groupContainer');
+  document.getElementById('stats').textContent = notes.length + ' 條';
+  let list = notes;
+  if (filter !== 'all') list = list.filter(n => n.tag === filter);
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    list = list.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+  }
+  const groups = {};
+  list.forEach(n => { const t = n.tag||'默认'; if(!groups[t]) groups[t]=[]; groups[t].push(n); });
+  const keys = order.filter(k => groups[k]);
+  if (!keys.length) { c.innerHTML = '<div class="wall"><div class="empty"><span class="icon">✧</span>還沒有記憶<br>寫一條吧</div></div>'; renderSidebar(); return; }
+  let html = '';
+  keys.forEach(tag => {
+    const items = groups[tag];
+    html += '<div class="section-title"><span>'+icons[tag]+' '+tag+'</span><span class="count">'+items.length+'</span><span class="line"></span></div><div class="wall">';
+    items.forEach(n => {
+      const d = new Date(n.time);
+      const t = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      const et = n.tag||'默认';
+      const hc = n.title ? 'card has-title' : 'card';
+      html += '<div class="'+hc+'" data-id="'+n.id+'"><span class="card-tag" data-tag="'+et+'">'+icons[et]+' '+et+'</span>';
+      if (n.title) html += '<div class="card-title">'+n.title+'</div>';
+      html += '<div class="card-content">'+n.content.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div><div class="card-time">'+t+'</div><div class="card-actions"><button class="edit-btn" data-id="'+n.id+'">✎</button><button class="delete-btn" data-id="'+n.id+'">✕</button></div></div>';
+    });
+    html += '</div>';
+  });
+  c.innerHTML = html;
+  document.querySelectorAll('.card').forEach(el => {
+    el.onclick = function(e) {
+      if (e.target.closest('.card-actions')) return;
+      const id = parseInt(this.dataset.id);
+      const n = notes.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('floatTag').textContent = (icons[n.tag||'默认']||'')+' '+(n.tag||'默认');
+      document.getElementById('floatTitle').textContent = n.title||'';
+      document.getElementById('floatTitle').style.display = n.title ? 'block' : 'none';
+      document.getElementById('floatContent').textContent = n.content;
+      const d = new Date(n.time);
+      document.getElementById('floatTime').textContent = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('floatView').classList.add('show');
+    };
+  });
+  document.querySelectorAll('.edit-btn').forEach(b => b.onclick = (e) => { e.stopPropagation(); openEdit(+b.dataset.id); });
+  document.querySelectorAll('.delete-btn').forEach(b => b.onclick = (e) => { e.stopPropagation(); notes = notes.filter(x => x.id !== +b.dataset.id); save(); render(); flt(); renderSidebar(); });
+  renderSidebar();
+}
+
+document.getElementById('floatClose').onclick = () => { document.getElementById('floatView').classList.remove('show'); };
+document.getElementById('floatView').onclick = (e) => { if (e.target === document.getElementById('floatView')) document.getElementById('floatView').classList.remove('show'); };
+
+function add() {
+  const ta = document.getElementById('newNote');
+  const title = document.getElementById('noteTitle').value.trim();
+  const c = ta.value.trim();
+  if (!c) return;
+  const note = { id: Date.now(), content: c, tag: document.getElementById('newTag').value, time: Date.now() };
+  if (title) note.title = title;
+  notes.unshift(note);
+  save();
+  ta.value = '';
+  document.getElementById('noteTitle').value = '';
+  render();
+  flt();
+}
+
+function openEdit(id) {
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  editId = id;
+  document.getElementById('editTitle').value = n.title || '';
+  document.getElementById('editContent').value = n.content;
+  document.getElementById('editTag').value = n.tag;
+  document.getElementById('modal').classList.add('show');
+}
+
+document.getElementById('cancelEdit').onclick = () => { document.getElementById('modal').classList.remove('show'); editId = null; };
+document.getElementById('saveEdit').onclick = () => {
+  if (!editId) return;
+  const c = document.getElementById('editContent').value.trim();
+  if (!c) return;
+  const n = notes.find(x => x.id === editId);
+  if (n) { n.title = document.getElementById('editTitle').value.trim()||''; n.content = c; n.tag = document.getElementById('editTag').value; n.time = Date.now(); save(); }
+  document.getElementById('modal').classList.remove('show');
+  editId = null;
+  render();
+  flt();
+};
+
+function flt() {
+  const tags = new Set(notes.map(n => n.tag));
+  let h = '<span class="filter-tag '+(filter==='all'?'active':'')+'" data-tag="all">全部</span>';
+  order.forEach(t => { if (tags.has(t)) h += '<span class="filter-tag '+(filter===t?'active':'')+'" data-tag="'+t+'">'+icons[t]+' '+t+'</span>'; });
+  document.getElementById('filters').innerHTML = h;
+  document.querySelectorAll('.filter-tag').forEach(el => {
+    el.onclick = () => { filter = el.dataset.tag; document.querySelectorAll('.filter-tag').forEach(e => e.classList.remove('active')); el.classList.add('active'); render(); };
+  });
+}
+
+document.getElementById('searchInput').oninput = (e) => { search = e.target.value; render(); renderSidebar(); };
+document.getElementById('newNote').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add(); } };
+document.getElementById('addBtn').onclick = add;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+// Hamburger sidebar toggle
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('sidebarBackdrop');
+document.getElementById('hamburgerBtn').onclick = () => {
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show');
+};
+backdrop.onclick = () => {
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('show');
+};
+
+// Export / Import
+document.getElementById('exportBtn').onclick = () => {
+  const data = JSON.stringify(notes, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '记忆墙备份_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById('importBtn').onclick = () => {
+  document.getElementById('importFile').click();
+};
+document.getElementById('importFile').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) throw '格式错误';
+      const existingIds = new Set(notes.map(n => n.id));
+      imported.forEach(n => { if (!existingIds.has(n.id)) { notes.push(n); } });
+      save(); render(); flt();
+      alert('导入成功，新增 '+(imported.filter(n => !existingIds.has(n.id)).length)+' 条记忆');
+    } catch(e) { alert('导入失败：文件格式不正确'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+render();
+flt();
+</script>
+</body>
+</html>

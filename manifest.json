@@ -1,0 +1,18 @@
+{
+  "name": "記憶牆",
+  "short_name": "記憶牆",
+  "description": "純前端個人記憶管理工具",
+  "start_url": "记忆墙.html",
+  "display": "standalone",
+  "background_color": "#f8f6f2",
+  "theme_color": "#b8928a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
