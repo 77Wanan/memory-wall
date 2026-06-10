@@ -1,5 +1,5 @@
 const CACHE = 'memory-wall-v1';
-const URLS = ['记忆墙.html', 'manifest.json', 'icon.svg'];
+const URLS = ['/', '记忆墙.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
