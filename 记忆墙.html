@@ -466,7 +466,7 @@ let loading = true;
 
 async function loadNotes() {
   try {
-    const res = await fetch('https://0821baab7a45bd.lhr.life/notes');
+    const res = await fetch('https://ade4aa14614d62.lhr.life/notes');
     const data = await res.json();
     notes = data.notes;
   } catch (e) {
@@ -564,7 +564,7 @@ function render() {
     };
   });
   document.querySelectorAll('.edit-btn').forEach(b => b.onclick = (e) => { e.stopPropagation(); openEdit(+b.dataset.id); });
-  document.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (e) => { e.stopPropagation(); await fetch('https://0821baab7a45bd.lhr.life/notes/'+b.dataset.id, {method:'DELETE'}); notes = notes.filter(x => x.id !== +b.dataset.id); render(); flt(); renderSidebar(); });
+  document.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (e) => { e.stopPropagation(); await fetch('https://ade4aa14614d62.lhr.life/notes/'+b.dataset.id, {method:'DELETE'}); notes = notes.filter(x => x.id !== +b.dataset.id); render(); flt(); renderSidebar(); });
   renderSidebar();
 }
 
@@ -577,7 +577,7 @@ async function add() {
   const c = ta.value.trim();
   if (!c) return;
   try {
-    const res = await fetch('https://0821baab7a45bd.lhr.life/notes?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(document.getElementById('newTag').value)+'&time='+Date.now(), {method:'POST'});
+    const res = await fetch('https://ade4aa14614d62.lhr.life/notes?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(document.getElementById('newTag').value)+'&time='+Date.now(), {method:'POST'});
     const data = await res.json();
     notes.unshift({id:data.id, title, content:c, tag:document.getElementById('newTag').value, time:Date.now()});
     ta.value = '';
@@ -607,7 +607,7 @@ document.getElementById('saveEdit').onclick = async () => {
   const title = document.getElementById('editTitle').value.trim()||'';
   const tag = document.getElementById('editTag').value;
   try {
-    await fetch('https://0821baab7a45bd.lhr.life/notes/'+editId+'?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(tag), {method:'PUT'});
+    await fetch('https://ade4aa14614d62.lhr.life/notes/'+editId+'?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(tag), {method:'PUT'});
     const n = notes.find(x => x.id === editId);
     if (n) { n.title = title; n.content = c; n.tag = tag; n.time = Date.now(); }
     document.getElementById('modal').classList.remove('show');
