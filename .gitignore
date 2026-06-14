@@ -5,3 +5,17 @@ notes.db
 __pycache__/
 *.pyc
 *.pyo
+
+# Environment
+.env
+backend/.env
+
+# Logs
+*.log
+
+# Local config
+.claude/
+
+# Scratch / unrelated
+netease/
+sandbox/

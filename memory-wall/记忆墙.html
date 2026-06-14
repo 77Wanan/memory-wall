@@ -176,11 +176,20 @@ body {
 .search-box { flex: 1; min-width: 180px; margin: 0; position: relative; }
 .search-box input {
   width: 100%; height: 38px; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: 20px; padding: 0 18px 0 40px; color: var(--text); font-size: 13px;
+  border-radius: 20px; padding: 0 70px 0 40px; color: var(--text); font-size: 13px;
   font-family: inherit; outline: none; transition: all .25s; box-shadow: 0 2px 12px var(--shadow);
 }
 .search-box input:focus { border-color: var(--muted-rose); box-shadow: 0 2px 16px var(--glow); }
 .search-box input::placeholder { color: var(--placeholder); font-weight: 300; }
+.search-mode-btn {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--card-bg); color: var(--text-mid); font-size: 10px;
+  font-family: inherit; cursor: pointer; letter-spacing: .5px;
+  transition: all .2s; white-space: nowrap;
+}
+.search-mode-btn:hover { border-color: var(--muted-rose); color: var(--text); }
+.search-mode-btn.active { border-color: var(--muted-rose); color: var(--text); background: var(--tag-bg); }
 .search-icon {
   position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
   font-size: 14px; color: var(--text-dim); pointer-events: none;
@@ -350,6 +359,91 @@ body {
   .mode-btn { padding: 6px 10px; font-size: 11px; }
   .stats { font-size: 11px; }
 }
+/* ===== Chat AI ===== */
+.chat-btn {
+  position: fixed; bottom: 24px; right: 24px;
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--card-bg);
+  color: var(--text); font-size: 18px; cursor: pointer;
+  box-shadow: 0 4px 20px var(--shadow); z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .25s; font-family: inherit;
+}
+.chat-btn:hover { border-color: var(--muted-rose); transform: scale(1.05); }
+.chat-panel {
+  position: fixed; bottom: 88px; right: 24px;
+  width: 380px; height: 520px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 18px; box-shadow: 0 8px 40px var(--shadow);
+  z-index: 200; display: none; flex-direction: column;
+  overflow: hidden; animation: chatIn .25s ease;
+}
+.chat-panel.show { display: flex; }
+@keyframes chatIn {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.chat-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 400; letter-spacing: 1px;
+}
+.chat-header button {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 16px; padding: 4px; transition: color .2s; font-family: inherit;
+}
+.chat-header button:hover { color: var(--text); }
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px; display: flex;
+  flex-direction: column; gap: 12px;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+.chat-msg {
+  max-width: 85%; padding: 10px 14px; border-radius: 14px;
+  font-size: 14px; line-height: 1.6; font-weight: 300;
+  word-break: break-word; white-space: pre-wrap; animation: msgIn .2s;
+}
+@keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.chat-msg.user {
+  align-self: flex-end; background: var(--tag-bg); color: var(--text);
+  border: 1px solid var(--border); border-bottom-right-radius: 4px;
+}
+.chat-msg.ai {
+  align-self: flex-start; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-bottom-left-radius: 4px;
+}
+.chat-msg.status {
+  align-self: center; background: transparent; color: var(--text-dim);
+  font-size: 12px; border: none; padding: 4px 8px;
+}
+.chat-input-area {
+  display: flex; gap: 8px; padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+.chat-input {
+  flex: 1; height: 38px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 14px; color: var(--text); font-size: 13px;
+  font-family: inherit; outline: none; transition: border-color .2s;
+}
+.chat-input:focus { border-color: var(--muted-rose); }
+.chat-input::placeholder { color: var(--placeholder); font-weight: 300; }
+.chat-send {
+  height: 38px; padding: 0 16px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--accent); color: var(--text);
+  font-size: 13px; font-family: inherit; cursor: pointer;
+  transition: all .2s; white-space: nowrap; font-weight: 300;
+}
+.chat-send:hover { border-color: var(--muted-rose); background: var(--tag-bg); }
+.chat-send:disabled { opacity: .4; cursor: not-allowed; }
+@media (max-width: 768px) {
+  .chat-panel { right: 12px; left: 12px; width: auto; height: 55vh; bottom: 80px; }
+  .chat-btn { bottom: 16px; right: 16px; width: 48px; height: 48px; font-size: 16px; }
+}
+@media (max-width: 520px) {
+  .chat-panel { height: 50vh; bottom: 72px; border-radius: 14px; }
+  .chat-btn { bottom: 12px; right: 12px; }
+}
 </style>
 </head>
 <body>
@@ -395,6 +489,7 @@ body {
       <div class="search-box">
         <span class="search-icon">⌕</span>
         <input type="text" id="searchInput" placeholder="搜索記憶…">
+        <button class="search-mode-btn" id="searchModeBtn">關鍵詞</button>
       </div>
       <div class="filters" id="filters">
         <span class="filter-tag active" data-tag="all">全部</span>
@@ -438,7 +533,29 @@ body {
   </div>
 </div>
 
+<!-- Chat AI -->
+<button class="chat-btn" id="chatBtn">✦</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <span>✦ AI 助手</span>
+    <div style="display:flex;gap:2px;align-items:center;">
+      <button id="chatClear" title="清空对话">↺</button>
+      <button id="chatClose">✕</button>
+    </div>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg ai">你好！我是你的笔记助手，可以帮你搜索和整理笔记内容。</div>
+  </div>
+  <div class="chat-input-area">
+    <input type="text" class="chat-input" id="chatInput" placeholder="问关于笔记的问题…">
+    <button class="chat-send" id="chatSend">发送</button>
+  </div>
+</div>
+
 <script>
+// === 配置 ===
+const API_BASE = '';
+
 // 手動晝夜按鈕
 let isNight = false;
 document.getElementById('themeBtn').onclick = function() {
@@ -466,7 +583,7 @@ let loading = true;
 
 async function loadNotes() {
   try {
-    const res = await fetch('https://ade4aa14614d62.lhr.life/notes');
+    const res = await fetch(API_BASE+'/notes');
     const data = await res.json();
     notes = data.notes;
   } catch (e) {
@@ -479,6 +596,33 @@ async function loadNotes() {
 let filter = 'all';
 let search = '';
 let editId = null;
+let searchMode = 'keyword';
+let semanticResults = null;
+
+document.getElementById('searchModeBtn').onclick = function() {
+  searchMode = searchMode === 'keyword' ? 'semantic' : 'keyword';
+  this.textContent = searchMode === 'keyword' ? '關鍵詞' : '語義';
+  this.classList.toggle('active');
+  if (searchMode === 'keyword') {
+    semanticResults = null;
+  } else if (search.trim()) {
+    doSemanticSearch(search);
+  }
+  render();
+  renderSidebar();
+};
+
+async function doSemanticSearch(q) {
+  try {
+    const res = await fetch(API_BASE+'/search/vector?q='+encodeURIComponent(q));
+    const data = await res.json();
+    semanticResults = data.results || [];
+  } catch(e) {
+    semanticResults = [];
+  }
+  render();
+  renderSidebar();
+}
 const icons = {'默认':'📌','学习':'📖','日常':'☕','技术':'⚙️','灵感':'💡','心情':'❤️'};
 const order = ['默认','学习','日常','技术','灵感','心情'];
 
@@ -487,15 +631,19 @@ async function save() {
 }
 
 function renderSidebar() {
-  const list = document.getElementById('sidebarList');
+  const sList = document.getElementById('sidebarList');
   let items = [...notes].reverse();
-  if (filter !== 'all') items = items.filter(n => n.tag === filter);
-  if (search.trim()) {
-    const q = search.trim().toLowerCase();
-    items = items.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+  if (searchMode === 'semantic' && semanticResults) {
+    items = [...semanticResults].reverse();
+  } else {
+    if (filter !== 'all') items = items.filter(n => n.tag === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      items = items.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+    }
   }
-  if (!items.length) { list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px;">暫無記憶</div>'; return; }
-  list.innerHTML = items.map(n => {
+  if (!items.length) { sList.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px;">暫無記憶</div>'; return; }
+  sList.innerHTML = items.map(n => {
     const t = n.title || (n.content.slice(0,20)+(n.content.length>20?'…':''));
     const p = n.title ? n.content.slice(0,30)+(n.content.length>30?'…':'') : '';
     const c = n.title ? '' : 'no-title';
@@ -523,10 +671,14 @@ function render() {
   const c = document.getElementById('groupContainer');
   document.getElementById('stats').textContent = notes.length + ' 條';
   let list = notes;
-  if (filter !== 'all') list = list.filter(n => n.tag === filter);
-  if (search.trim()) {
-    const q = search.trim().toLowerCase();
-    list = list.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+  if (searchMode === 'semantic' && semanticResults) {
+    list = semanticResults;
+  } else {
+    if (filter !== 'all') list = list.filter(n => n.tag === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(n => n.content.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+    }
   }
   const groups = {};
   list.forEach(n => { const t = n.tag||'默认'; if(!groups[t]) groups[t]=[]; groups[t].push(n); });
@@ -564,7 +716,7 @@ function render() {
     };
   });
   document.querySelectorAll('.edit-btn').forEach(b => b.onclick = (e) => { e.stopPropagation(); openEdit(+b.dataset.id); });
-  document.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (e) => { e.stopPropagation(); await fetch('https://ade4aa14614d62.lhr.life/notes/'+b.dataset.id, {method:'DELETE'}); notes = notes.filter(x => x.id !== +b.dataset.id); render(); flt(); renderSidebar(); });
+  document.querySelectorAll('.delete-btn').forEach(b => b.onclick = async (e) => { e.stopPropagation(); await fetch(API_BASE+'/notes/'+b.dataset.id, {method:'DELETE'}); notes = notes.filter(x => x.id !== +b.dataset.id); render(); flt(); renderSidebar(); });
   renderSidebar();
 }
 
@@ -577,7 +729,7 @@ async function add() {
   const c = ta.value.trim();
   if (!c) return;
   try {
-    const res = await fetch('https://ade4aa14614d62.lhr.life/notes?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(document.getElementById('newTag').value)+'&time='+Date.now(), {method:'POST'});
+    const res = await fetch(API_BASE+'/notes?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(document.getElementById('newTag').value)+'&time='+Date.now(), {method:'POST'});
     const data = await res.json();
     notes.unshift({id:data.id, title, content:c, tag:document.getElementById('newTag').value, time:Date.now()});
     ta.value = '';
@@ -607,7 +759,7 @@ document.getElementById('saveEdit').onclick = async () => {
   const title = document.getElementById('editTitle').value.trim()||'';
   const tag = document.getElementById('editTag').value;
   try {
-    await fetch('https://ade4aa14614d62.lhr.life/notes/'+editId+'?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(tag), {method:'PUT'});
+    await fetch(API_BASE+'/notes/'+editId+'?title='+encodeURIComponent(title)+'&content='+encodeURIComponent(c)+'&tag='+encodeURIComponent(tag), {method:'PUT'});
     const n = notes.find(x => x.id === editId);
     if (n) { n.title = title; n.content = c; n.tag = tag; n.time = Date.now(); }
     document.getElementById('modal').classList.remove('show');
@@ -629,7 +781,16 @@ function flt() {
   });
 }
 
-document.getElementById('searchInput').oninput = (e) => { search = e.target.value; render(); renderSidebar(); };
+document.getElementById('searchInput').oninput = (e) => {
+  search = e.target.value;
+  if (searchMode === 'semantic' && search.trim()) {
+    doSemanticSearch(search);
+  } else {
+    if (searchMode === 'semantic') semanticResults = null;
+    render();
+    renderSidebar();
+  }
+};
 document.getElementById('newNote').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add(); } };
 document.getElementById('addBtn').onclick = add;
 
@@ -681,6 +842,121 @@ document.getElementById('importFile').onchange = (e) => {
 };
 
 loadNotes();
+
+// === Chat AI ===
+let chatHistory = [];
+let isStreaming = false;
+
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+document.getElementById('chatBtn').onclick = () => {
+  document.getElementById('chatPanel').classList.toggle('show');
+};
+document.getElementById('chatClose').onclick = () => {
+  document.getElementById('chatPanel').classList.remove('show');
+};
+document.getElementById('chatClear').onclick = () => {
+  chatHistory = [];
+  chatMessages.innerHTML = '<div class="chat-msg ai">你好！我是你的笔记助手，可以帮你搜索和整理笔记内容。</div>';
+};
+
+function addChatMsg(role, text) {
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + role;
+  el.textContent = text;
+  chatMessages.appendChild(el);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return el;
+}
+
+function chatSetStatus(text) {
+  let el = chatMessages.querySelector('.chat-msg.status:last-child');
+  if (!el || el.dataset.active !== '1') {
+    el = document.createElement('div');
+    el.className = 'chat-msg status';
+    el.dataset.active = '1';
+    chatMessages.appendChild(el);
+  }
+  el.textContent = text;
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function chatClearStatus() {
+  const el = chatMessages.querySelector('.chat-msg.status[data-active="1"]');
+  if (el) el.remove();
+}
+
+async function doChat() {
+  const msg = chatInput.value.trim();
+  if (!msg || isStreaming) return;
+  chatInput.value = '';
+
+  addChatMsg('user', msg);
+  chatHistory.push({ role: 'user', content: msg });
+
+  const aiEl = addChatMsg('ai', '');
+  isStreaming = true;
+  chatSend.disabled = true;
+
+  try {
+    const res = await fetch(API_BASE + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, history: chatHistory.slice(0, -1) }),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let fullContent = '';
+    let evt = '', dat = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) evt = line.slice(7);
+        else if (line.startsWith('data: ')) dat = line.slice(6);
+        else if (line === '' && evt) {
+          if (evt === 'token') {
+            fullContent += dat;
+            aiEl.textContent = fullContent;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          } else if (evt === 'status') {
+            chatSetStatus(dat);
+          } else if (evt === 'error') {
+            aiEl.textContent = '错误：' + dat;
+          }
+          evt = ''; dat = '';
+        }
+      }
+    }
+    chatClearStatus();
+    if (fullContent) {
+      chatHistory.push({ role: 'assistant', content: fullContent });
+    }
+  } catch (e) {
+    aiEl.textContent = '连接失败，请确认后端正在运行。';
+  }
+
+  isStreaming = false;
+  chatSend.disabled = false;
+}
+
+chatSend.onclick = doChat;
+chatInput.onkeydown = (e) => {
+  if (e.key === 'Enter' && !e.isComposing) {
+    e.preventDefault();
+    doChat();
+  }
+};
 </script>
 </body>
 </html>
