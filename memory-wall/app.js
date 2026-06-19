@@ -337,6 +337,8 @@ document.getElementById('searchInput').oninput = (e) => {
 document.getElementById('newNote').onkeydown = (e) => {
   if (e.isComposing || e.key !== 'Enter') return;
   if (e.shiftKey) return; // Shift+Enter → newline always
+  // Mobile: never intercept Enter, always insert newline
+  if ('ontouchstart' in window) return;
   if (inputMode === 'long' && !e.ctrlKey && !e.metaKey) return; // Enter → newline in long mode
   e.preventDefault();
   add();
