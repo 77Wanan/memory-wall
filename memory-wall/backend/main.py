@@ -1,17 +1,48 @@
-from fastapi import FastAPI, Query, Request
+"""Memory Wall — FastAPI backend."""
+
+from contextlib import asynccontextmanager
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import sqlite3, json, os, pathlib
-from openai import OpenAI
+from pydantic import BaseModel
+import json
+import pathlib
 
 from shared import get_db, get_embedding, cosine_similarity, _drop_emb, load_api_key
 
-# === 配置 ===
-_BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
-_DB_PATH = _BASE_DIR / "notes.db"
-_DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
-_DEEPSEEK_API_KEY = load_api_key()
+# ── Config ──
+_BASE_DIR: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent
+_DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
+_DEEPSEEK_API_KEY: str = load_api_key()
+
+# ── Pydantic models ──
+
+class NoteCreate(BaseModel):
+    title: str = ""
+    content: str = ""
+    tag: str = "默认"
+
+class NoteUpdate(BaseModel):
+    title: str = ""
+    content: str = ""
+    tag: str = "默认"
+
+class ChatRequest(BaseModel):
+    message: str = ""
+    history: list[dict] = []
+
+# ── Embedding helpers ──
+
+def _compute_embedding(text: str) -> Optional[list[float]]:
+    emb = get_embedding(text)
+    if not emb:
+        return None
+    if all(v == 0.0 for v in emb):
+        return None
+    return emb
+
 
 def _vector_search(q: str, top_k: int = 10) -> list[dict]:
     emb = get_embedding(q)
@@ -20,7 +51,7 @@ def _vector_search(q: str, top_k: int = 10) -> list[dict]:
     db = get_db()
     rows = db.execute("SELECT * FROM notes").fetchall()
     db.close()
-    scored = []
+    scored: list[tuple[float, dict]] = []
     for r in rows:
         stored = r["embedding"]
         if not stored:
@@ -30,13 +61,19 @@ def _vector_search(q: str, top_k: int = 10) -> list[dict]:
     scored.sort(key=lambda x: -x[0])
     return [_drop_emb(r) for _, r in scored[:top_k]]
 
-# === DeepSeek 客户端 ===
-_ds_client = None
-def get_ds_client():
+# ── DeepSeek client ──
+
+from openai import OpenAI  # noqa: E402
+
+_ds_client: Optional[OpenAI] = None
+
+
+def _get_ds_client() -> Optional[OpenAI]:
     global _ds_client
     if _ds_client is None and _DEEPSEEK_API_KEY:
         _ds_client = OpenAI(api_key=_DEEPSEEK_API_KEY, base_url=_DEEPSEEK_BASE_URL)
     return _ds_client
+
 
 _SEARCH_TOOL = {
     "type": "function",
@@ -48,16 +85,18 @@ _SEARCH_TOOL = {
             "properties": {
                 "query": {"type": "string", "description": "搜索关键词，用和笔记相同的语言"}
             },
-            "required": ["query"]
-        }
-    }
+            "required": ["query"],
+        },
+    },
 }
+
 
 def _sse(event: str, data: str) -> str:
     return f"event: {event}\ndata: {data}\n\n"
 
-def chat_gen(body: dict):
-    client = get_ds_client()
+
+def _chat_gen(body: dict):
+    client = _get_ds_client()
     if not client:
         yield _sse("error", "AI 未配置（缺少 API Key）")
         return
@@ -68,11 +107,15 @@ def chat_gen(body: dict):
         yield _sse("error", "消息不能为空")
         return
 
-    messages = [{
-        "role": "system",
-        "content": "你是一个笔记助手。回答跟用户笔记相关的问题时，先调 search_notes 搜索笔记，再根据笔记内容回答。"
-        "回答要简洁有条理，用中文。如果笔记内容不足以回答问题，如实说不知道。"
-    }]
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是一个笔记助手。回答跟用户笔记相关的问题时，先调 search_notes 搜索笔记，再根据笔记内容回答。"
+                "回答要简洁有条理，用中文。如果笔记内容不足以回答问题，如实说不知道。"
+            ),
+        }
+    ]
     for h in history[-10:]:
         messages.append({"role": h["role"], "content": h["content"]})
     messages.append({"role": "user", "content": message})
@@ -99,13 +142,24 @@ def chat_gen(body: dict):
                 yield _sse("status", f"在笔记中搜索: {args['query']}")
                 results = _vector_search(args["query"])
                 messages.append(choice.message)
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": json.dumps(
-                        [{"id": r["id"], "title": r.get("title",""), "content": r["content"], "tag": r.get("tag","")}
-                         for r in results], ensure_ascii=False)
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": json.dumps(
+                            [
+                                {
+                                    "id": r["id"],
+                                    "title": r.get("title", ""),
+                                    "content": r["content"],
+                                    "tag": r.get("tag", ""),
+                                }
+                                for r in results
+                            ],
+                            ensure_ascii=False,
+                        ),
+                    }
+                )
 
         yield _sse("status", "生成回答……")
         stream = client.chat.completions.create(
@@ -129,22 +183,11 @@ def chat_gen(body: dict):
 
     yield _sse("done", "")
 
-# ===== App & Middleware =====
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-@app.post("/chat")
-async def chat(request: Request):
-    body = await request.json()
-    return StreamingResponse(chat_gen(body), media_type="text/event-stream")
+# ── Lifecycle ──
 
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
     db = get_db()
     db.execute(
         "CREATE TABLE IF NOT EXISTS notes ("
@@ -177,51 +220,87 @@ def startup():
                 db.commit()
         print("Backfill done.")
     db.close()
+    yield
+
+
+# ── App ──
+
+app = FastAPI(lifespan=_lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ── API Routes ──
 
 @app.get("/notes")
-def get_notes():
+def list_notes(page: int = Query(1, ge=1), limit: int = Query(50, ge=1, le=200)):
     db = get_db()
-    notes = db.execute("SELECT * FROM notes ORDER BY id DESC").fetchall()
+    total = db.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+    offset = (page - 1) * limit
+    rows = db.execute(
+        "SELECT * FROM notes ORDER BY id DESC LIMIT ? OFFSET ?",
+        (limit, offset),
+    ).fetchall()
     db.close()
-    return {"notes": [_drop_emb(n) for n in notes]}
+    return {
+        "notes": [_drop_emb(n) for n in rows],
+        "total": total,
+        "page": page,
+        "limit": limit,
+    }
 
-@app.post("/notes")
-def create_note(title: str = "", content: str = "", tag: str = "默认", time: int = 0):
-    if time == 0:
-        time = int(__import__("time").time() * 1000)
-    text = (title or "") + " " + content
-    emb = get_embedding(text)
+
+@app.post("/notes", status_code=201)
+def create_note(body: NoteCreate):
+    text = (body.title or "") + " " + body.content
+    emb = _compute_embedding(text)
+    import time
+    ts = int(time.time() * 1000)
     db = get_db()
     cur = db.execute(
         "INSERT INTO notes (title, content, tag, time, embedding) VALUES (?, ?, ?, ?, ?)",
-        (title, content, tag, time, json.dumps(emb) if emb else None),
+        (body.title, body.content, body.tag, ts, json.dumps(emb) if emb else None),
     )
     db.commit()
     note_id = cur.lastrowid
     db.close()
-    return {"id": note_id, "title": title, "content": content, "tag": tag, "time": time}
+    return {"id": note_id, "title": body.title, "content": body.content, "tag": body.tag, "time": ts}
+
 
 @app.put("/notes/{note_id}")
-def update_note(note_id: int, title: str = "", content: str = "", tag: str = "默认"):
-    text = (title or "") + " " + content
-    emb = get_embedding(text)
-    emb_json = json.dumps(emb) if emb else None
+def update_note(note_id: int, body: NoteUpdate):
     db = get_db()
+    existing = db.execute("SELECT * FROM notes WHERE id=?", (note_id,)).fetchone()
+    if not existing:
+        db.close()
+        raise HTTPException(status_code=404, detail="笔记不存在")
+    text = (body.title or "") + " " + body.content
+    emb = _compute_embedding(text)
     db.execute(
         "UPDATE notes SET title=?, content=?, tag=?, embedding=? WHERE id=?",
-        (title, content, tag, emb_json, note_id),
+        (body.title, body.content, body.tag, json.dumps(emb) if emb else None, note_id),
     )
     db.commit()
     db.close()
     return {"ok": True}
 
+
 @app.delete("/notes/{note_id}")
 def delete_note(note_id: int):
     db = get_db()
+    existing = db.execute("SELECT * FROM notes WHERE id=?", (note_id,)).fetchone()
+    if not existing:
+        db.close()
+        raise HTTPException(status_code=404, detail="笔记不存在")
     db.execute("DELETE FROM notes WHERE id=?", (note_id,))
     db.commit()
     db.close()
     return {"ok": True}
+
 
 @app.get("/search/vector")
 def vector_search(q: str = Query(...), top_k: int = 20):
@@ -230,7 +309,7 @@ def vector_search(q: str = Query(...), top_k: int = 20):
         return {"results": [], "error": "AI 搜索不可用"}
     db = get_db()
     rows = db.execute("SELECT * FROM notes").fetchall()
-    scored = []
+    scored: list[tuple[float, dict]] = []
     for r in rows:
         stored = r["embedding"]
         if not stored:
@@ -242,9 +321,29 @@ def vector_search(q: str = Query(...), top_k: int = 20):
     db.close()
     return {"results": results}
 
-# ===== Frontend Static Files =====
+
+@app.post("/chat")
+async def chat(body: ChatRequest):
+    return StreamingResponse(
+        _chat_gen(body.model_dump()), media_type="text/event-stream"
+    )
+
+
+# ── Exception handler ──
+
+@app.exception_handler(Exception)
+async def _global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "服务器内部错误", "detail": str(exc)},
+    )
+
+
+# ── Static files ──
+
 @app.get("/", include_in_schema=False)
 async def serve_frontend():
     return FileResponse(_BASE_DIR / "记忆墙.html")
+
 
 app.mount("/", StaticFiles(directory=str(_BASE_DIR), html=False), name="static")
