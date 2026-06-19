@@ -7,6 +7,10 @@
 
 在确认上述步骤完成后再开始响应用户。
 
+# Git 纪律
+
+用户要求：**每次增删改查代码后都必须提交到 git**。每次修改完成后先 commit 再继续下一步，不积攒批量提交。
+
 # MCP 服务
 
 本项目自带一个 MCP 服务器 `backend/mcp_server.py`，已注册到 `.claude/settings.json`。
