@@ -334,7 +334,13 @@ document.getElementById('searchInput').oninput = (e) => {
     render();
   }
 };
-document.getElementById('newNote').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add(); } };
+document.getElementById('newNote').onkeydown = (e) => {
+  if (e.isComposing || e.key !== 'Enter') return;
+  if (e.shiftKey) return; // Shift+Enter → newline always
+  if (inputMode === 'long' && !e.ctrlKey && !e.metaKey) return; // Enter → newline in long mode
+  e.preventDefault();
+  add();
+};
 document.getElementById('addBtn').onclick = add;
 
 if ('serviceWorker' in navigator) {
