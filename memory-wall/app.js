@@ -1,5 +1,5 @@
 // === 配置 ===
-const API_BASE = '';
+const API_BASE = 'http://localhost:8000';
 const PAGE_SIZE = 50;
 
 let notes = [];
