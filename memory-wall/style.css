@@ -349,7 +349,7 @@ body {
 }
 /* ===== Chat AI ===== */
 .chat-btn {
-  position: fixed; bottom: 24px; right: 24px;
+  position: fixed; bottom: 24px; left: 24px;
   width: 52px; height: 52px; border-radius: 50%;
   border: 1px solid var(--border); background: var(--card-bg);
   color: var(--text); font-size: 18px; cursor: pointer;
@@ -359,7 +359,7 @@ body {
 }
 .chat-btn:hover { border-color: var(--muted-rose); transform: scale(1.05); }
 .chat-panel {
-  position: fixed; bottom: 88px; right: 24px;
+  position: fixed; bottom: 88px; left: 24px;
   width: 380px; height: 520px;
   background: var(--card-bg); border: 1px solid var(--border);
   border-radius: 18px; box-shadow: 0 8px 40px var(--shadow);
@@ -425,10 +425,10 @@ body {
 .chat-send:hover { border-color: var(--muted-rose); background: var(--tag-bg); }
 .chat-send:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 768px) {
-  .chat-panel { right: 12px; left: 12px; width: auto; height: 55vh; bottom: 80px; }
-  .chat-btn { bottom: 16px; right: 16px; width: 48px; height: 48px; font-size: 16px; }
+  .chat-panel { left: 12px; right: 12px; width: auto; height: 55vh; bottom: 80px; }
+  .chat-btn { bottom: 16px; left: 16px; width: 48px; height: 48px; font-size: 16px; }
 }
 @media (max-width: 520px) {
   .chat-panel { height: 50vh; bottom: 72px; border-radius: 14px; }
-  .chat-btn { bottom: 12px; right: 12px; }
+  .chat-btn { bottom: 12px; left: 12px; }
 }
