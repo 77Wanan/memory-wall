@@ -8,7 +8,7 @@
 <h1 align="center">记忆 · 墙</h1>
 
 <p align="center">
-  全栈 PWA 笔记应用 · 离线可用 · AI 语义搜索 · 昼夜自转
+  全栈 PWA 笔记应用 · 离线可用 · 昼夜自转<br>  <sub>AI 语义搜索需自备 DeepSeek API Key</sub>
 </p>
 
 <p align="center">
@@ -26,11 +26,11 @@
 - **离线可用** — Service Worker 缓存，无网也能看已加载的笔记
 - **昼夜主题** — 莫兰迪色系，点击切换日间/夜间模式
 - **标签分组** — 默认 / 学习 / 日常 / 技术 / 灵感 / 心情，按标签分栏展示
-- **语义搜索** — 接入 DeepSeek Embedding 实现向量检索，语义匹配而非关键词
+- **语义搜索** ⚡ — 接入 DeepSeek Embedding 实现向量检索（需自备 API Key）
 - **加载更多** — 后端分页 + 前端渐进加载
 - **草稿保护** — 输入内容自动存入 localStorage，误刷新可恢复
 - **导入/导出** — 全量 JSON 备份与恢复
-- **AI 助手** — 基于 DeepSeek 的对话式笔记搜索（Streaming SSE）
+- **AI 助手** ⚡ — 基于 DeepSeek 的对话式笔记搜索（需自备 API Key）
 - **PWA 可安装** — manifest.json + Service Worker，支持添加到桌面
 
 ## 快速开始
